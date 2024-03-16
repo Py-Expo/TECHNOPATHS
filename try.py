@@ -35,17 +35,17 @@ def translate_and_merge(video_path, target_language='es'):
     # Transcribe audio to text
     extracted_text = transcribe_audio(audio_path)
     extracted_text_file = os.path.splitext(video_path)[0] + "_extracted_text.txt"
-    with open(extracted_text_file, 'w') as f:
+    with open(extracted_text_file, 'w', encoding='utf-8') as f:
         f.write(extracted_text)
     
     # Translate extracted text to target language
     translated_text = translate_text(extracted_text, target_language)
     translated_text_file = os.path.splitext(video_path)[0] + "_translated_text.txt"
-    with open(translated_text_file, 'w') as f:
+    with open(translated_text_file, 'w', encoding='utf-8') as f:
         f.write(translated_text)
     
-    # Generate audio from translated text
-    translated_audio_file = generate_translated_audio(translated_text, target_language, video_path)
+    # Translate extracted audio to target language
+    translated_audio_file = translate_audio(audio_path, target_language)
     
     # Merge audio with original video
     output_video_path = merge_audio_with_video(video_path, translated_audio_file)
@@ -74,18 +74,27 @@ def translate_text(text, target_language='en'):
     translated_text = translator.translate(text, dest=target_language).text
     return translated_text
 
-def generate_translated_audio(text, target_language='en', video_path=''):
-    translator = Translator()
-    translated_text = translator.translate(text, dest=target_language).text
+def translate_audio(audio_path, target_language='en'):
+    # Load the audio file
+    audio_clip = mp.AudioFileClip(audio_path)
+    
+    # Convert audio to text
+    extracted_text = transcribe_audio(audio_path)
+    
+    # Translate the text
+    translated_text = translate_text(extracted_text, target_language)
+    
+    # Generate translated audio
     tts = gTTS(text=translated_text, lang=target_language)
-    translated_audio_file = os.path.splitext(video_path)[0] + "_translated_audio.mp3"
+    translated_audio_file = os.path.splitext(audio_path)[0] + "_translated.mp3"
     tts.save(translated_audio_file)
+    
     return translated_audio_file
 
 def merge_audio_with_video(video_path, translated_audio_file):
     video_clip = mp.VideoFileClip(video_path)
     audio_clip = mp.AudioFileClip(translated_audio_file)
-    video_clip = video_clip.set_audiofile(audio_clip)
+    video_clip = video_clip.set_audio(audio_clip)
     output_path = os.path.splitext(video_path)[0] + "_translated.mp4"
     video_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
     return output_path
